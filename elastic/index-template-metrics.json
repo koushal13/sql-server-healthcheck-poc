@@ -1,0 +1,15 @@
+{
+  "index_patterns": ["dbmon-metrics*"],
+  "template": {
+    "settings": {"number_of_shards": 1},
+    "mappings": {
+      "properties": {
+        "@timestamp": {"type": "date"},
+        "event_type": {"type": "keyword"},
+        "host": {"type": "keyword"},
+        "sql_instance": {"type": "keyword"},
+        "payload": {"type": "object", "enabled": true}
+      }
+    }
+  }
+}

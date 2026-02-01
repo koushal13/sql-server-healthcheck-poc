@@ -1,0 +1,109 @@
+rules:
+  - id: deadlock_detected
+    event_type: deadlocks
+    field: deadlock_xml
+    op: "!="
+    value: null
+    severity: critical
+    message: "Deadlock detected"
+    recommendations:
+      - "Review transaction ordering and reduce lock duration."
+
+  - id: blocking_long_wait
+    event_type: blocking
+    field: wait_time_ms
+    op: ">="
+    value: 30000
+    severity: high
+    message: "Blocking longer than 30 seconds"
+    recommendations:
+      - "Investigate blocking session and reduce lock duration."
+
+  # Senior DBA Best Practice: Multi-tier slow query detection
+  # Tier 1: Extremely slow individual executions (P0 - immediate attention)
+  - id: slow_query_critical
+    event_type: slow_queries
+    field: avg_elapsed_time_ms
+    op: ">="
+    value: 60000  # 60 seconds - critical
+    severity: critical
+    message: "Critical slow query: avg > 60s"
+    recommendations:
+      - "IMMEDIATE ACTION: Review execution plan for missing indexes, scans, or poor join strategies."
+      - "Check for parameter sniffing issues - consider OPTION(RECOMPILE) or plan guides."
+      - "Analyze query for implicit conversions and non-SARGable predicates."
+      - "Review statistics freshness with DBCC SHOW_STATISTICS."
+  
+  # Tier 2: Significantly slow queries (standard threshold)
+  - id: slow_query_high
+    event_type: slow_queries
+    field: avg_elapsed_time_ms
+    op: ">="
+    value: 10000  # 10 seconds - high priority
+    severity: high
+    message: "Slow query detected: avg > 10s"
+    recommendations:
+      - "Review execution plan for table scans, key lookups, and sort operations."
+      - "Check for missing indexes using avg_logical_reads and reads_per_row metrics."
+      - "Consider query rewrite or breaking into smaller batches."
+  
+  # Tier 3: High cumulative impact (frequent moderate queries)
+  - id: slow_query_cumulative_impact
+    event_type: slow_queries
+    field: total_elapsed_seconds
+    op: ">="
+    value: 300  # 5 minutes total - cumulative impact
+    severity: high
+    message: "High cumulative query impact: total > 5min"
+    recommendations:
+      - "Frequently executed query with significant cumulative impact."
+      - "Even small optimizations will have major system-wide benefits."
+      - "Consider caching, result set reduction, or query optimization."
+  
+  # Tier 4: I/O intensive queries (storage bottleneck)
+  - id: slow_query_high_io
+    event_type: slow_queries
+    field: avg_logical_reads
+    op: ">="
+    value: 50000  # 50k reads per execution
+    severity: medium
+    message: "High I/O query: excessive logical reads"
+    recommendations:
+      - "Query is performing excessive data page reads."
+      - "Check reads_per_row ratio - should be < 100 for efficient queries."
+      - "Add covering indexes to eliminate key lookups."
+      - "Consider columnstore for analytical queries."
+  
+  # Tier 5: CPU-bound queries (computation bottleneck)
+  - id: slow_query_cpu_bound
+    event_type: slow_queries
+    field: cpu_percentage
+    op: ">="
+    value: 80  # CPU is 80%+ of elapsed time
+    severity: medium
+    message: "CPU-bound query detected"
+    recommendations:
+      - "Query is compute-intensive (high CPU vs elapsed time)."
+      - "Review for functions in WHERE clause (e.g., UPPER, SUBSTRING)."
+      - "Check for scalar UDFs - consider inline TVFs or native functions."
+      - "Analyze parallelism (avg_dop) - may need MAXDOP tuning."
+
+  - id: high_cpu
+    event_type: cpu_memory
+    field: cpu_percent
+    op: ">="
+    value: 85
+    severity: high
+    message: "High CPU usage"
+    recommendations:
+      - "Check top CPU queries and indexes."
+
+  - id: low_tempdb_space
+    event_type: tempdb_health
+    field: free_space_kb
+    op: "<="
+    value: 10000
+    severity: high
+    message: "Low TempDB free space"
+    recommendations:
+      - "Increase TempDB size and check for spills."

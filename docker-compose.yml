@@ -1,0 +1,63 @@
+services:
+  elasticsearch:
+    image: elasticsearch:8.15.1
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  kibana:
+    image: kibana:8.15.1
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong!Passw0rd
+    ports:
+      - "1433:1433"
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+
+  dashboard:
+    build: .
+    container_name: sql-server-healthcheck
+    ports:
+      - "8000:8000"
+    environment:
+      - ELASTIC_URL=http://elasticsearch:9200
+      - OLLAMA_URL=http://ollama:11434
+      - USE_AI_ANALYSIS=false
+      - COLLECTOR_MODE=mock
+      - SAMPLE_INPUT_PATH=/app/sample_inputs/sample_metrics.jsonl
+      - ALERT_RULES_PATH=/app/alerting/rules.yaml
+      - SQL_CONNECTION_STRING=Driver={ODBC Driver 18 for SQL Server};Server=mssql,1433;Database=master;UID=sa;PWD=YourStrong!Passw0rd;TrustServerCertificate=yes;Encrypt=no
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      mssql:
+        condition: service_started
+
+volumes:
+  ollama_data:

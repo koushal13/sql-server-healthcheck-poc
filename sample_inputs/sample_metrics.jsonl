@@ -1,0 +1,7 @@
+{"@timestamp":"2026-01-31T00:00:01Z","event_type":"blocking","payload":{"blocked_session_id":88,"blocking_session_id":12,"wait_type":"LCK_M_X","wait_time_ms":45000,"database_name":"Sales","query_text":"UPDATE Orders SET Status='Processing' WHERE OrderId=42"}}
+{"@timestamp":"2026-01-31T00:00:02Z","event_type":"deadlocks","payload":{"deadlock_xml":"<deadlock><victim-list/></deadlock>"}}
+{"@timestamp":"2026-01-31T00:00:03Z","event_type":"open_transactions","payload":{"transaction_id":452991,"transaction_state":4,"login_name":"appuser"}}
+{"@timestamp":"2026-01-31T00:00:04Z","event_type":"missing_indexes","payload":{"database_name":"Sales","table_name":"dbo.Orders","avg_user_impact":82,"equality_columns":"CustomerId","included_columns":"OrderDate"}}
+{"@timestamp":"2026-01-31T00:00:05Z","event_type":"slow_queries","payload":{"avg_elapsed_time_ms":32500,"execution_count":14,"query_text":"SELECT * FROM Orders WHERE Status='Pending'"}}
+{"@timestamp":"2026-01-31T00:00:06Z","event_type":"cpu_memory","payload":{"cpu_percent":92,"available_memory_mb":2048,"total_memory_mb":65536,"sql_memory_in_use_mb":59000}}
+{"@timestamp":"2026-01-31T00:00:07Z","event_type":"tempdb_health","payload":{"user_objects_kb":120000,"internal_objects_kb":90000,"version_store_kb":60000,"free_space_kb":8000}}

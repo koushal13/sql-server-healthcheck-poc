@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DBMon Dashboard - LIVE</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #64748b;
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status {
+            font-size: 0.9em;
+            color: #94a3b8;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            font-size: 1em;
+        }
+
+        button:hover {
+            background: #0284c7;
+            transform: scale(1.05);
+        }
+
+        button.primary {
+            background: #10b981;
+        }
+
+        button.primary:hover {
+            background: #059669;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .analysis-box {
+            background: #1e293b;
+            border-left: 4px solid #8b5cf6;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        .analysis-loading {
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .refresh-timer {
+            color: #94a3b8;
+            font-size: 0.9em;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card:hover {
+            border-color: #64748b;
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+        }
+
+        .card h2 {
+            font-size: 1.2em;
+            color: #60a5fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .badge.critical { background: #ef4444; color: white; }
+        .badge.high { background: #f97316; color: white; }
+        .badge.medium { background: #facc15; color: black; }
+        .badge.low { background: #22c55e; color: white; }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #60a5fa;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9em;
+        }
+
+        .problem-item {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+        }
+
+        .problem-item.high {
+            border-left-color: #f97316;
+            background: rgba(249, 115, 22, 0.1);
+        }
+
+        .problem-item.medium {
+            border-left-color: #facc15;
+            background: rgba(250, 204, 21, 0.1);
+        }
+
+        .problem-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #fbbf24;
+        }
+
+        .problem-detail {
+            font-size: 0.9em;
+            color: #cbd5e1;
+            margin-bottom: 10px;
+        }
+
+        .analysis-box {
+            background: rgba(96, 165, 250, 0.1);
+            border: 1px solid #0ea5e9;
+            padding: 12px;
+            margin-top: 12px;
+            border-radius: 6px;
+        }
+
+        .analysis-section {
+            margin: 10px 0;
+        }
+
+        .analysis-label {
+            font-weight: bold;
+            color: #60a5fa;
+            margin-bottom: 5px;
+        }
+
+        .analysis-text {
+            color: #cbd5e1;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #94a3b8;
+        }
+
+        .grid-full {
+            grid-column: 1/-1;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 15px 0;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #334155;
+            border-radius: 50%;
+            border-top-color: #60a5fa;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            .controls {
+                flex-direction: column;
+            }
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 DBMon Dashboard - LIVE</h1>
+            <p class="status">Showing active problems from last 2 minutes (history preserved) | Auto-refresh every 30s | 
+                <span class="status-indicator"></span>
+                Real-time SQL Server Health Monitor
+            </p>
+        </header>
+
+        <div class="controls">
+            <button class="primary" onclick="runCollector()">📥 Run Collector Now</button>
+            <button onclick="loadProblems()">🔴 Current Problems</button>
+            <button onclick="loadStats()">📊 Stats</button>
+            <button onclick="loadRecommendations()">💡 Recommendations</button>
+            <span class="refresh-timer">⏱️ Auto-refresh in <span id="timer">30</span>s</span>
+        </div>
+
+        <div id="content" class="grid"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let autoRefreshInterval = null;
+        let refreshTimer = 30;
+        let charts = {};
+
+        async function apiCall(endpoint, method = 'GET', body = null, timeoutMs = 10000) {
+            const controller = timeoutMs > 0 ? new AbortController() : null;
+            const timeoutId = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
+            try {
+                const options = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: controller ? controller.signal : undefined
+                };
+                if (body) options.body = JSON.stringify(body);
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                if (!response.ok) throw new Error(`API error: ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.error(`Failed to fetch ${endpoint}:`, error);
+                return { error: error?.message || 'Request failed' };
+            } finally {
+                if (timeoutId) clearTimeout(timeoutId);
+            }
+        }
+
+        async function runCollector() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Collecting...';
+            
+            const result = await apiCall('/run-collector', 'POST', null, 0);
+            
+            if (result?.status === 'success') {
+                btn.innerHTML = '⏳ Loading...';
+                await loadProblems();  // Reload dashboard with fresh data
+                btn.innerHTML = '✅ Collected!';
+                btn.style.background = '#10b981';
+                setTimeout(() => {
+                    btn.innerHTML = '📥 Run Collector Now';
+                    btn.style.background = '';
+                    btn.disabled = false;
+                }, 2000);
+            } else {
+                btn.innerHTML = '❌ Failed';
+                btn.style.background = '#ef4444';
+                console.error('Collector error:', result?.message || result?.error);
+                setTimeout(() => {
+                    btn.innerHTML = '📥 Run Collector Now';
+                    btn.style.background = '';
+                    btn.disabled = false;
+                }, 3000);
+            }
+        }
+
+        async function killSession(sessionId, btn) {
+            if (!confirm(`⚠️ Are you sure you want to KILL session ${sessionId}?\n\nThis will:\n- Rollback any open transaction\n- Terminate the connection\n- Cannot be undone`)) {
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ Killing...';
+            
+            const result = await apiCall('/kill-session', 'POST', { session_id: sessionId });
+            
+            if (result?.status === 'success') {
+                btn.textContent = '✅ Killed';
+                btn.style.background = '#10b981';
+                setTimeout(async () => {
+                    await apiCall('/run-collector', 'POST');
+                    await loadProblems();
+                }, 1500);
+            } else {
+                btn.textContent = '❌ Failed';
+                btn.style.background = '#7f1d1d';
+                console.error('Kill error:', result?.message);
+                setTimeout(() => {
+                    btn.textContent = '💀 Kill Session';
+                    btn.style.background = '#ef4444';
+                    btn.disabled = false;
+                }, 3000);
+            }
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'Unknown';
+            try {
+                // SQL Server returns datetime in ISO format like: 2026-02-01T13:44:47.123
+                // Parse it as UTC and convert to EST
+                const date = new Date(dateStr + 'Z'); // Add Z to treat as UTC
+                if (isNaN(date.getTime())) {
+                    return dateStr; // Return raw string if parsing fails
+                }
+                // Format in EST timezone
+                return date.toLocaleString('en-US', { 
+                    timeZone: 'America/New_York',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                });
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        async function loadProblems() {
+            const lastUpdate = new Date().toLocaleTimeString();
+            document.querySelector('header .status').innerHTML = 
+                `Showing active problems from last 2 minutes (history preserved) | Auto-refresh every 30s | Last updated: ${lastUpdate} <span class="status-indicator"></span>`;
+            document.getElementById('content').innerHTML = '<div class="loading"><span class="spinner"></span> Loading live problems...</div>';
+            
+            const [blocking, deadlocks, slowQueries, openTransactions, alerts] = await Promise.all([
+                apiCall('/blocking'),
+                apiCall('/deadlocks'),
+                apiCall('/slow-queries?limit=10'),
+                apiCall('/api/events?event_type=open_transactions'),
+                apiCall('/alerts')
+            ]);
+
+            let html = '';
+            let problemCount = 0;
+
+            // Critical Deadlocks
+            if (deadlocks?.events?.length) {
+                html += '<div class="card grid-full"><div class="card-header"><h2>💀 CRITICAL: Deadlocks Detected</h2><span class="badge critical">' + deadlocks.events.length + '</span></div>';
+                deadlocks.events.forEach(event => {
+                    problemCount++;
+                    html += `
+                        <div class="problem-item">
+                            <div class="problem-title">Deadlock at ${new Date(event['@timestamp']).toLocaleTimeString()}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            // Blocking Sessions
+            if (blocking?.events?.length) {
+                html += '<div class="card grid-full"><div class="card-header"><h2>🔒 Blocking Sessions</h2><span class="badge high">' + blocking.events.length + '</span></div>';
+                blocking.events.forEach(event => {
+                    problemCount++;
+                    const p = event.payload;
+                    html += `
+                        <div class="problem-item high">
+                            <div class="problem-title">Session ${p.blocked_session_id} blocked by ${p.blocking_session_id}</div>
+                            <div class="problem-detail">Wait Type: ${p.wait_type} | Duration: ${p.wait_time_ms}ms | DB: ${p.database_name}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            // Slow Queries
+            if (slowQueries?.events?.length) {
+                html += '<div class="card grid-full"><div class="card-header"><h2>🐢 Slow Queries</h2><span class="badge medium">' + slowQueries.events.length + '</span></div>';
+                slowQueries.events.forEach(event => {
+                    problemCount++;
+                    const p = event.payload;
+                    const queryId = 'query_' + Math.random().toString(36).substr(2, 9);
+                    html += `
+                        <div class="problem-item medium">
+                            <div class="problem-title">Slow Query - ${p.avg_elapsed_time_ms?.toFixed(0)}ms avg (Session ${p.session_id})</div>
+                            <div class="problem-detail"><strong>Query:</strong> ${p.query_text}</div>
+                            <div class="problem-detail"><strong>Executed:</strong> ${p.execution_count} times | <strong>CPU:</strong> ${p.cpu_time_ms}ms | <strong>Reads:</strong> ${p.avg_logical_reads} | <strong>Host:</strong> ${p.host_name}</div>
+                            <div style="margin-top: 10px;">
+                                <button class="analyze-btn" style="background: #8b5cf6;" onclick="analyzeSlowQuery('${queryId}', ${p.session_id}, '${p.query_text.replace(/'/g, "\\'")}', ${p.avg_elapsed_time_ms}, ${p.cpu_time_ms}, this)">🤖 AI Analysis</button>
+                            </div>
+                            <div id="${queryId}" class="analysis-box" style="display:none; margin-top:15px; padding:15px; background:#1e293b; border-left:4px solid #8b5cf6; border-radius:4px;"></div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            // Open Transactions (from direct events, not alerts)
+            // Deduplicate by session_id - show only latest for each session
+            if (openTransactions?.events?.length) {
+                const uniqueSessions = {};
+                openTransactions.events.forEach(event => {
+                    const sessionId = event.payload.session_id;
+                    if (!uniqueSessions[sessionId] || new Date(event['@timestamp']) > new Date(uniqueSessions[sessionId]['@timestamp'])) {
+                        uniqueSessions[sessionId] = event;
+                    }
+                });
+                
+                const uniqueEvents = Object.values(uniqueSessions);
+                if (uniqueEvents.length > 0) {
+                    html += '<div class="card grid-full"><div class="card-header"><h2>📝 Open Transactions</h2><span class="badge medium">' + uniqueEvents.length + '</span></div>';
+                    uniqueEvents.forEach(event => {
+                        problemCount++;
+                        const p = event.payload;
+                        const duration = event['@timestamp'] ? Math.floor((new Date() - new Date(p.transaction_begin_time)) / 1000) : 0;
+                        html += `
+                            <div class="problem-item medium">
+                                <div class="problem-title">Open Transaction: Session ${p.session_id}</div>
+                                <div class="problem-detail">User: ${p.login_name} | Host: ${p.host_name} | Duration: ${p.duration_seconds}s</div>
+                                <div class="problem-detail">Query: ${p.query_text?.trim() || 'Waiting for input'}</div>
+                                <div class="problem-detail">Started: ${formatDate(p.transaction_begin_time)}</div>
+                                <div style="margin-top: 10px;">
+                                    <button class="analyze-btn" style="background: #ef4444;" onclick="killSession(${p.session_id}, this)">💀 Kill Session</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+            }
+
+            if (!problemCount) {
+                html = '<div class="card grid-full empty-state"><h2>✅ All Systems Healthy!</h2><p>No active problems detected in the last 2 minutes.</p><p style="margin-top:10px; font-size:0.85em;">Historical data is preserved in Elasticsearch. Click "Run Collector Now" to fetch latest metrics.</p></div>';
+            }
+
+            document.getElementById('content').innerHTML = html;
+            startAutoRefresh();
+        }
+
+        async function loadStats() {
+            const data = await apiCall('/stats');
+            const health = await apiCall('/health');
+            
+            let html = `
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📈 Overall Health</h2>
+                    </div>
+                    <div class="stat-value">${health?.total_events || 0}</div>
+                    <div class="stat-label">Total Events (Last Hour)</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>💾 System Resources</h2>
+                    </div>
+                    <div class="stat-value">${data?.avg_cpu?.toFixed(1) || 0}%</div>
+                    <div class="stat-label">Avg CPU Usage</div>
+                    <div class="stat-value" style="font-size: 1.8em; margin-top: 10px;">${(data?.avg_free_tempdb / 1024).toFixed(2) || 0} MB</div>
+                    <div class="stat-label">TempDB Free Space</div>
+                </div>
+
+                <div class="card grid-full">
+                    <div class="card-header">
+                        <h2>📊 Event Distribution</h2>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="eventChart"></canvas>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+            
+            if (data?.event_counts) {
+                setTimeout(() => createEventChart(data.event_counts), 100);
+            }
+            startAutoRefresh();
+        }
+
+        function createEventChart(counts) {
+            const ctx = document.getElementById('eventChart');
+            if (!ctx) return;
+            
+            if (charts.event) charts.event.destroy();
+            
+            charts.event = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: counts.map(c => c.key),
+                    datasets: [{
+                        data: counts.map(c => c.doc_count),
+                        backgroundColor: ['#60a5fa', '#f97316', '#ef4444', '#22c55e', '#8b5cf6', '#ec4899'],
+                        borderColor: '#0f172a',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#e2e8f0' } }
+                    }
+                }
+            });
+        }
+
+        async function loadRecommendations() {
+            const data = await apiCall('/recommendations');
+            
+            if (!data?.recommendations?.length) {
+                document.getElementById('content').innerHTML = '<div class="card grid-full empty-state"><h2>✅ All Clear</h2><p>No recommendations at this time</p></div>';
+                startAutoRefresh();
+                return;
+            }
+
+            let html = '<div class="card grid-full"><h2>💡 Recommendations</h2>';
+            data.recommendations.forEach((rec, idx) => {
+                html += `<div class="recommendation">${idx + 1}. ${rec}</div>`;
+            });
+            html += '</div>';
+            
+            document.getElementById('content').innerHTML = html;
+            startAutoRefresh();
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+            
+            refreshTimer = 30;
+            document.getElementById('timer').textContent = refreshTimer;
+            
+            autoRefreshInterval = setInterval(async () => {
+                refreshTimer--;
+                document.getElementById('timer').textContent = refreshTimer;
+                
+                if (refreshTimer <= 0) {
+                    // Auto-collect fresh data before loading problems
+                    await apiCall('/run-collector', 'POST');
+                    await loadProblems();
+                }
+            }, 1000);
+        }
+
+        async function analyzeSlowQuery(elementId, sessionId, queryText, elapsedMs, cpuMs, buttonElement) {
+            const analysisBox = document.getElementById(elementId);
+            analysisBox.style.display = 'block';
+            analysisBox.innerHTML = '<div class="analysis-loading">🔍 Analyzing with Ollama...</div>';
+            buttonElement.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'llama3.2',
+                        prompt: `You are a SQL Server performance expert DBA. Analyze this slow query and provide:
+1. Why this query is slow (2-3 key reasons)
+2. Primary performance issue
+3. 2-3 specific optimization recommendations
+4. Estimated improvement potential
+
+Query Performance Metrics:
+- Elapsed Time: ${elapsedMs}ms
+- CPU Time: ${cpuMs}ms
+- Session ID: ${sessionId}
+
+SQL Query:
+${queryText}
+
+Provide concise, actionable advice for a DBA. Format as bullet points.`,
+                        stream: false
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Ollama error: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const analysis = data.response || 'No analysis available';
+                
+                analysisBox.innerHTML = `<div style="white-space: pre-wrap; font-family: monospace; font-size: 0.9em;">${analysis.substring(0, 2000)}</div>`;
+            } catch (error) {
+                analysisBox.innerHTML = `<div style="color: #ef4444;">❌ Analysis failed: ${error.message}</div><div style="color: #94a3b8; font-size: 0.85em; margin-top: 8px;">Make sure Ollama is running: <code>docker run -d --name ollama -p 11434:5000 ollama/ollama</code></div>`;
+            } finally {
+                buttonElement.disabled = false;
+            }
+        }
+
+        window.addEventListener('load', async () => {
+            // Auto-collect fresh data on page load
+            document.getElementById('content').innerHTML = '<div class="loading"><span class="spinner"></span> Collecting fresh data from SQL Server...</div>';
+            const result = await apiCall('/run-collector', 'POST');
+            if (result?.status !== 'success') {
+                const message = result?.message || result?.error || 'Collector failed or timed out';
+                document.getElementById('content').innerHTML = `<div class="card grid-full empty-state"><h2>❌ Collector Failed</h2><p>${message}</p><p style="margin-top:10px; font-size:0.85em;">Ensure SQL Server and Elasticsearch are running, then click "Run Collector Now".</p></div>`;
+                return;
+            }
+            await loadProblems();
+        });
+    </script>
+</body>
+</html>

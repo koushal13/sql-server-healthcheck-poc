@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dbmon"
+version = "0.1.0"
+description = "SQL Server monitoring automation with Elastic and dashboard API"
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+  "fastapi==0.115.6",
+  "uvicorn==0.30.6",
+  "elasticsearch==8.15.1",
+  "pydantic==2.9.2",
+  "pydantic-settings==2.5.2",
+  "requests==2.32.3",
+  "PyYAML==6.0.2",
+  "python-dateutil==2.9.0.post0",
+  "pyodbc==5.1.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
