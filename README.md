@@ -4,18 +4,16 @@ Real-time SQL Server monitoring with automated problem detection, AI-powered ana
 
 ## Demo
 
-🎥 **Demo Video Available**
+🎥 **[Watch the Demo Video](./demo.mp4)** (3.6MB)
 
-A 104MB demo video (`DEMO.mov`) is included in the local repository showing the system in action:
-- Connecting to SQL Server
-- Detecting problems (blocking, slow queries, deadlocks)
-- Triggering alerts with AI-powered recommendations
-- Real-time dashboard updates
+See the system in action:
+- Connecting to SQL Server and detecting problems
+- Real-time blocking chains and slow query detection
+- Triggering alerts with severity levels
+- AI-powered explanations and recommendations
+- Dashboard auto-refresh and manual collection
 
-**Note:** The video file is too large for GitHub (>100MB) and is kept locally. To share, consider:
-- Uploading to YouTube/Vimeo and linking here
-- Using a file hosting service (Google Drive, Dropbox)
-- Compressing the video to fit GitHub's 100MB limit
+**Duration:** ~1 minute | **Resolution:** 2394x1548 @ 60fps
 
 ## Features
 
