@@ -2,6 +2,21 @@
 
 Real-time SQL Server monitoring with automated problem detection, AI-powered analysis, and actionable recommendations. Monitor deadlocks, blocking chains, slow queries, CPU/memory usage, TempDB health, and missing indexes.
 
+## Demo
+
+🎥 **Demo Video Available**
+
+A 104MB demo video (`DEMO.mov`) is included in the local repository showing the system in action:
+- Connecting to SQL Server
+- Detecting problems (blocking, slow queries, deadlocks)
+- Triggering alerts with AI-powered recommendations
+- Real-time dashboard updates
+
+**Note:** The video file is too large for GitHub (>100MB) and is kept locally. To share, consider:
+- Uploading to YouTube/Vimeo and linking here
+- Using a file hosting service (Google Drive, Dropbox)
+- Compressing the video to fit GitHub's 100MB limit
+
 ## Features
 
 - 🔍 **7 Critical Metrics**: Deadlocks, blocking chains, open transactions, slow queries, CPU/memory, TempDB health, missing indexes

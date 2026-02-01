@@ -52,3 +52,8 @@ sample_inputs/stress_*.jsonl
 
 # Jupyter
 .ipynb_checkpoints
+
+# Large files (too big for GitHub - host externally)
+DEMO.mov
+*.mov
+*.mp4
