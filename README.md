@@ -13,9 +13,189 @@ Real-time SQL Server monitoring with automated problem detection, AI-powered ana
 
 ## Architecture
 
+### System Components
+
 ```
-SQL Server → DBMon Collector → Elasticsearch → FastAPI Dashboard → Web UI
-             (Python/pyodbc)    (Metrics Store)  (Port 8000)      (Browser)
+┌─────────────────────────────────────────────────────────────────────┐
+│                         YOUR SQL SERVER                              │
+│  - Docker SQL Server (port 1433)                                     │
+│  - SQL Server Express / Enterprise / Azure SQL                       │
+│  - Problems: Deadlocks, Blocking, Slow Queries, etc.                 │
+└────────────────────────────────┬────────────────────────────────────┘
+                                 │
+                          pyodbc connection
+                          (ODBC Driver 18)
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                   DBMON COLLECTOR (Python)                           │
+│  - Queries 7 DMV views (sys.dm_exec_requests, etc.)                 │
+│  - Detects: deadlocks, blocking, slow queries, CPU, memory          │
+│  - Applies alerting rules (rules.yaml)                               │
+│  - Enriches with AI explanations (optional: Ollama)                  │
+└────────────────────────────────┬────────────────────────────────────┘
+                                 │
+                          bulk index API
+                          (HTTP POST)
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│              ELASTICSEARCH (Docker - port 9200)                      │
+│  - Index: dbmon-metrics (raw DMV data)                               │
+│  - Index: dbmon-alerts (triggered alerts with explanations)          │
+│  - Retention: 30 days (configurable ILM)                             │
+│  - Full-text search enabled                                          │
+└────────────────────────────────┬────────────────────────────────────┘
+                                 │
+                          search queries
+                          (Elasticsearch DSL)
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│              FASTAPI DASHBOARD (Python - port 8000)                  │
+│  - REST API: /alerts, /blocking, /slow-queries, /deadlocks          │
+│  - Trigger: POST /run-collector (on-demand collection)               │
+│  - AI Explain: POST /explain (problem analysis)                      │
+└────────────────────────────────┬────────────────────────────────────┘
+                                 │
+                          HTTP requests
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                   WEB UI (static/index.html)                         │
+│  - Dashboard with charts & tables                                    │
+│  - Auto-refresh: 30 seconds                                          │
+│  - Manual trigger: "Run Collector Now" button                        │
+│  - View: last 5/30 minutes or custom time range                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Docker Compose Stack
+
+The system runs as a complete Docker stack with 5 services:
+
+```yaml
+services:
+  elasticsearch:8.15.1  → Data storage (port 9200)
+  kibana:8.15.1         → Optional: Data exploration UI (port 5601)
+  mssql:2019           → SQL Server for testing (port 1433)
+  ollama:latest        → Optional: AI analysis (port 11434)
+  dashboard:latest     → FastAPI + Collector (port 8000)
+```
+
+**Network Flow:**
+- Dashboard connects to Elasticsearch on `http://elasticsearch:9200` (Docker internal network)
+- Dashboard connects to SQL Server on `mssql:1433` or external server
+- User accesses dashboard at `http://localhost:8000` (host machine)
+- Optional: Kibana UI at `http://localhost:5601` for advanced queries
+
+## Process Flow
+
+### Data Collection Flow
+
+```
+1. TRIGGER
+   ├─ Manual: User clicks "Run Collector Now" button
+   ├─ API: POST /run-collector
+   └─ Scheduled: Cron job (e.g., every 5 minutes)
+                 └─> python -m dbmon.cli collect
+
+2. QUERY SQL SERVER (collector.py)
+   ├─ Connect via pyodbc
+   ├─ Execute 7 DMV queries:
+   │  ├─ sys.dm_exec_requests (slow queries, blocking)
+   │  ├─ sys.dm_tran_active_transactions (open transactions)
+   │  ├─ sys.dm_os_performance_counters (CPU, memory)
+   │  ├─ sys.dm_db_file_space_usage (TempDB)
+   │  ├─ sys.dm_db_missing_index_details (missing indexes)
+   │  └─ system_health XEvents (deadlocks)
+   └─ Parse results into metrics (JSON)
+
+3. APPLY ALERTING RULES (alerts.py)
+   ├─ Load rules from alerting/rules.yaml
+   ├─ Evaluate conditions:
+   │  ├─ Slow query: avg_elapsed_ms > 20000
+   │  ├─ Blocking: wait_time_ms > 30000
+   │  ├─ Open transaction: duration_seconds > 3600
+   │  ├─ High CPU: cpu_percent > 85
+   │  ├─ TempDB low: free_space_gb < 10
+   │  └─ etc.
+   └─ Generate alerts (with severity: low/medium/high/critical)
+
+4. ENRICH WITH AI (explainer.py - optional)
+   ├─ For each alert:
+   │  ├─ Send to Ollama LLM (or OpenAI)
+   │  ├─ Get simple explanation (plain English)
+   │  └─ Get actionable recommendations
+   └─ Add to alert object
+
+5. SHIP TO ELASTICSEARCH (elastic.py)
+   ├─ Bulk index metrics → dbmon-metrics index
+   ├─ Bulk index alerts → dbmon-alerts index
+   └─ Add @timestamp for time-series queries
+
+6. DASHBOARD DISPLAY (dashboard.py)
+   ├─ Query Elasticsearch for last N minutes
+   ├─ Aggregate by:
+   │  ├─ Alert type (blocking, slow query, etc.)
+   │  ├─ Severity (critical, high, medium, low)
+   │  └─ Time buckets (for charts)
+   ├─ Return JSON to frontend
+   └─ Frontend renders tables + charts
+
+7. USER INTERACTION
+   ├─ View alerts with explanations
+   ├─ Click "Show Details" for recommendations
+   ├─ Click "Run Collector Now" to refresh
+   └─ Change time range to view history
+```
+
+### Query Execution Timeline
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ T=0s: User clicks "Run Collector Now"                           │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│ T=0-2s: Connect to SQL Server & Execute 7 DMV Queries           │
+│   - sys.dm_exec_requests          (0.2s)                        │
+│   - sys.dm_tran_active_transactions (0.1s)                      │
+│   - sys.dm_os_performance_counters (0.1s)                       │
+│   - sys.dm_db_file_space_usage    (0.3s)                        │
+│   - sys.dm_db_missing_index_details (0.5s)                      │
+│   - system_health deadlocks       (0.8s)                        │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│ T=2-3s: Apply Alerting Rules                                    │
+│   - Evaluate 15+ conditions                                     │
+│   - Filter out non-critical issues                              │
+│   - Assign severity levels                                      │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│ T=3-5s: AI Enrichment (optional, if enabled)                    │
+│   - Send 3-5 alerts to Ollama                                   │
+│   - Get explanations + recommendations                           │
+│   - Fallback: Use template explanations if AI unavailable       │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│ T=5-6s: Bulk Index to Elasticsearch                             │
+│   - 100-500 metric documents                                    │
+│   - 3-10 alert documents                                        │
+│   - Async write (non-blocking)                                  │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│ T=6s: Dashboard Auto-Refresh                                    │
+│   - Query Elasticsearch (last 30 min)                           │
+│   - Render updated alerts                                       │
+│   - Show "Last updated: 2 seconds ago"                          │
+└─────────────────────────────────────────────────────────────────┘
+
+Total Time: ~6 seconds (with AI) or ~3 seconds (without AI)
 ```
 
 ## Prerequisites
