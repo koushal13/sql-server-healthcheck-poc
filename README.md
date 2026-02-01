@@ -4,16 +4,20 @@ Real-time SQL Server monitoring with automated problem detection, AI-powered ana
 
 ## Demo
 
-🎥 **[Watch the Demo Video](./demo.mp4)** (3.6MB)
+🎥 **Watch the System in Action**
 
-See the system in action:
+<video src="https://github.com/koushal13/sql-server-healthcheck-poc/raw/main/demo.mp4" controls width="100%" style="max-width: 800px;">
+  Your browser does not support the video tag. <a href="./demo.mp4">Download the demo video</a>
+</video>
+
+**What you'll see:**
 - Connecting to SQL Server and detecting problems
-- Real-time blocking chains and slow query detection
+- Real-time blocking chains and slow query detection  
 - Triggering alerts with severity levels
 - AI-powered explanations and recommendations
 - Dashboard auto-refresh and manual collection
 
-**Duration:** ~1 minute | **Resolution:** 2394x1548 @ 60fps
+**Video Details:** 1 minute 19 seconds | 2394x1548 @ 60fps | 3.6MB
 
 ## Features
 
