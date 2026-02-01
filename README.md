@@ -6,9 +6,7 @@ Real-time SQL Server monitoring with automated problem detection, AI-powered ana
 
 🎥 **Watch the System in Action**
 
-<video src="https://github.com/koushal13/sql-server-healthcheck-poc/raw/main/demo.mp4" controls width="100%" style="max-width: 800px;">
-  Your browser does not support the video tag. <a href="./demo.mp4">Download the demo video</a>
-</video>
+https://github.com/user-attachments/assets/fdbafbf7-4f7a-4ff1-b444-ad68845cdba7
 
 **What you'll see:**
 - Connecting to SQL Server and detecting problems
